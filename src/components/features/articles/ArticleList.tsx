@@ -61,10 +61,6 @@ export default function ArticleList({ filters }: ArticleListProps) {
 
   const totalPages = Math.ceil(totalArticles / articlesPerPage);
 
-  if (isLoading) {
-    return <div>Loading articles...</div>;
-  }
-
   if (error) {
     return <div className="text-red-500">{error}</div>;
   }
@@ -88,7 +84,7 @@ export default function ArticleList({ filters }: ArticleListProps) {
         </div>
       )}
       
-      {/* Di sini Anda bisa menambahkan komponen Pagination */}
+      {/* komponen Pagination */}
       <AppPagination
         currentPage={currentPage}
         totalPages={totalPages}

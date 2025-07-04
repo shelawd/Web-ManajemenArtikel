@@ -27,7 +27,7 @@ type Article = {
   thumbnailUrl?: string;
 };
 
-export default function AdminArticlesPage() {
+export default function ArticlesListPage() {
   const [filters, setFilters] = useState({ category: "", search: "" });
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,21 +35,25 @@ export default function AdminArticlesPage() {
   const totalArticles = articles.length;
   const currentPage = 1;
   const totalPages = 1;
-
-  // Ambil artikel dari API saat halaman dimuat
-  const fetchArticles = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get("/articles");
-      setArticles(response.data.data);
-    } catch (error) {
-      console.error("Failed to fetch articles:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
   useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const token = localStorage.getItem("access_token");
+        const response = await api.get("/articles", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setArticles(response.data.data || []);
+      } catch (error) {
+        console.error("Gagal mengambil data artikel:", error);
+        alert("Gagal memuat artikel.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchArticles();
   }, []);
 
@@ -71,9 +75,11 @@ export default function AdminArticlesPage() {
   };
 
   return (
- <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm max-w-full">
+    <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm max-w-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <p className="text-sm md:text-base font-semibold">Total Articles: {totalArticles}</p>
+        <p className="text-sm md:text-base font-semibold">
+          Total Articles: {totalArticles}
+        </p>
         <div className="flex flex-wrap items-center gap-4">
           <ArticleFilters onFilterChange={setFilters} />
           <Button asChild>
@@ -93,7 +99,9 @@ export default function AdminArticlesPage() {
                 <TableHead className="min-w-[150px]">Title</TableHead>
                 <TableHead className="min-w-[120px]">Category</TableHead>
                 <TableHead className="min-w-[160px]">Created at</TableHead>
-                <TableHead className="text-right min-w-[140px]">Action</TableHead>
+                <TableHead className="text-right min-w-[140px]">
+                  Action
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -124,7 +132,10 @@ export default function AdminArticlesPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end flex-wrap">
-                      <Button variant="link" className="p-0 h-auto text-xs md:text-sm">
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-xs md:text-sm"
+                      >
                         Preview
                       </Button>
                       <Button
@@ -132,7 +143,9 @@ export default function AdminArticlesPage() {
                         variant="link"
                         className="p-0 h-auto text-blue-600 text-xs md:text-sm"
                       >
-                        <Link href={`/admin/articles/edit/${article.id}`}>Edit</Link>
+                        <Link href={`/admin/articles/edit/${article.id}`}>
+                          Edit
+                        </Link>
                       </Button>
                       <Button
                         variant="link"

@@ -65,7 +65,6 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
 
       {/* Konten Artikel */}
       <div className="max-w-3xl mx-auto prose prose-lg mb-16">
-        {/* Jika konten HTML, gunakan dangerouslySetInnerHTML */}
         <div dangerouslySetInnerHTML={{ __html: article.content }} />
       </div>
 

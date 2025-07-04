@@ -36,7 +36,7 @@ export default function LoginPage() {
       });
 
       const token = response.data.token;
-      const role = response.data.role; // Asumsi backend mengirim role user
+      const role = response.data.role; 
 
       if (token && role) {
         localStorage.setItem("access_token", token);

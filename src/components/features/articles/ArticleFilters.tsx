@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 interface ArticleFiltersProps {
   onFilterChange: (filters: { category: string; search: string }) => void;
-  // Anda bisa menambahkan prop untuk daftar kategori dari server
 }
 
 export default function ArticleFilters({ onFilterChange }: ArticleFiltersProps) {
@@ -20,13 +19,12 @@ export default function ArticleFilters({ onFilterChange }: ArticleFiltersProps) 
   }, [category, debouncedSearchTerm, onFilterChange]);
 
   return (
-    <div className="flex gap-4 items-center">
+    <div className="flex gap-4 items-center bg-[#3B82F6] px-3 py-3 rounded-xl">
       <Select onValueChange={setCategory} value={category}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[180px] bg-white text-black">
           <SelectValue placeholder="Select category" />
         </SelectTrigger>
         <SelectContent>
-          {/* Mapping daftar kategori di sini */}
           <SelectItem value="technology">Technology</SelectItem>
           <SelectItem value="design">Design</SelectItem>
         </SelectContent>
@@ -36,7 +34,7 @@ export default function ArticleFilters({ onFilterChange }: ArticleFiltersProps) 
         placeholder="Search articles..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="flex-grow"
+        className="flex-grow bg-white text-black"
       />
     </div>
   );

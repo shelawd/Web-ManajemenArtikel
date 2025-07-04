@@ -15,9 +15,8 @@ import AppPagination from '@/components/shared/AppPagination';
 import CategoryModal from '@/components/features/admin/CategoryModal';
 import DeleteDialog from '@/components/features/admin/DeleteDialog';
 import api from '@/lib/axios';
-import { useDebounce } from '@/lib/hooks'; // Asumsi hook ini sudah ada
+import { useDebounce } from '@/lib/hooks'; 
 
-// Tipe data untuk kategori
 type Category = {
   id: string;
   name: string;
@@ -62,7 +61,6 @@ export default function AdminCategoriesPage() {
       setTotalPages(Math.ceil(response.data.total / itemsPerPage));
     } catch (error) {
       console.error("Failed to fetch categories:", error);
-      // Tampilkan notifikasi error
     } finally {
       setIsLoading(false);
     }
@@ -84,19 +82,17 @@ export default function AdminCategoriesPage() {
     setEditingCategory(null);
   };
 
-  // Handler untuk menyimpan (Create/Update)
+  // Handler untuk menyimpan 
   const handleSaveCategory = async (data: CategoryFormData) => {
     setIsSaving(true);
     try {
       if (editingCategory) {
-        // Mode Update
         await api.put(`/categories/${editingCategory.id}`, data);
       } else {
-        // Mode Create
         await api.post('/categories', data);
       }
       handleCloseModal();
-      fetchCategories(); // Ambil data terbaru
+      fetchCategories(); 
     } catch (error) {
       console.error("Failed to save category:", error);
     } finally {
@@ -117,7 +113,7 @@ export default function AdminCategoriesPage() {
       await api.delete(`/categories/${deletingCategory.id}`);
       setIsDeleteDialogOpen(false);
       setDeletingCategory(null);
-      fetchCategories(); // Ambil data terbaru
+      fetchCategories(); 
     } catch (error) {
       console.error("Failed to delete category:", error);
     }

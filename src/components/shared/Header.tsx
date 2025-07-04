@@ -65,9 +65,9 @@ export default function Header() {
 
   return (
     <>
-      <header className="w-full bg-white shadow-sm flex items-center justify-between px-6 py-3">
+      <header className="w-full  bg-blue-600 shadow-sm flex items-center justify-between px-6 py-3">
         <Link href="/">
-          <span className="font-bold text-xl">Logoipsum</span>
+          <span className="font-bold text-xl text-white">Logoipsum</span>
         </Link>
 
         <div>

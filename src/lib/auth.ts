@@ -9,5 +9,5 @@ export async function fetchUserProfile() {
       Authorization: `Bearer ${token}`,
     },
   });
-  return response.data; // data mengandung role, username, dsb.
+  return response.data; 
 }

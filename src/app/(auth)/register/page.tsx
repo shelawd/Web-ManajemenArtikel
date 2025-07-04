@@ -37,17 +37,15 @@ const onSubmit = async (data: RegisterFormValues) => {
         role: data.role,
       });
 
-      const token = response.data.token;
 
       if (response.status === 200 || response.status === 201) {
-        localStorage.setItem('access_token', token);
         alert('Register berhasil!');
         router.push('/login');
       } else {
         alert('Register berhasil, tapi token tidak ditemukan.');
       }
     } catch (error: any) {
-      alert('Register gagal: ' + (error.response?.data?.message || error.message));
+       console.error("Registrasi Gagal:", error.response); 
     }
   };
 

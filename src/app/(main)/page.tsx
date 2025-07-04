@@ -37,11 +37,11 @@ export default function Home() {
 
   // Render user homepage
   return (
-    <div className="container mx-auto">
-      <div className="text-center my-8 bg-blue-600 p-12 rounded-lg text-white">
-        <p>Blog genzet</p>
+    <div className="w-full ">
+      <div className="text-center bg-blue-600 py-16 px-4 text-white">
+        <p className="font-semibold text-2xl">Blog genzet</p>
         <h1 className="text-4xl md:text-5xl font-bold my-2">The Journal: Design Resources, Interviews, and Industry News</h1>
-        <p className="text-lg">Your daily dose of design insights!</p>
+        <p className="text-3xl">Your daily dose of design insights!</p>
 
         <div className="max-w-2xl mx-auto mt-6">
           <ArticleFilters onFilterChange={handleFilterChange} />
