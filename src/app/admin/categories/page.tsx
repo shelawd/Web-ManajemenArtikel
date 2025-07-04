@@ -100,24 +100,39 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  // Handler untuk membuka dialog hapus
-  const handleOpenDeleteDialog = (category: Category) => {
-    setDeletingCategory(category);
-    setIsDeleteDialogOpen(true);
-  };
+// Ganti blok fungsi-fungsi ini di kode Anda dengan yang di bawah
 
-  // Handler untuk konfirmasi hapus
-  const handleDeleteCategory = async () => {
-    if (!deletingCategory) return;
-    try {
-      await api.delete(`/categories/${deletingCategory.id}`);
-      setIsDeleteDialogOpen(false);
-      setDeletingCategory(null);
-      fetchCategories(); 
-    } catch (error) {
-      console.error("Failed to delete category:", error);
-    }
-  };
+// Fungsi untuk membuka dialog
+const handleOpenDeleteDialog = (category: Category) => {
+  setDeletingCategory(category);
+  setIsDeleteDialogOpen(true);
+};
+
+// Fungsi untuk menutup dialog (ini yang mungkin hilang)
+const handleCloseDeleteDialog = () => {
+  setIsDeleteDialogOpen(false);
+  setDeletingCategory(null);
+};
+
+// Fungsi untuk mengeksekusi delete
+const handleDeleteCategory = async () => {
+  if (!deletingCategory) return;
+  try {
+    const token = localStorage.getItem("access_token");
+    await api.delete(`/categories/${deletingCategory.id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    fetchCategories();
+  } catch (error) {
+    console.error("Failed to delete category:", error);
+    alert("Failed to delete category.");
+  } finally {
+    // Memanggil fungsi close yang sudah pasti terdefinisi
+    handleCloseDeleteDialog();
+  }
+};
 
   return (
     <>
@@ -186,7 +201,7 @@ export default function AdminCategoriesPage() {
       />
       <DeleteDialog
         isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
+        onClose={handleCloseDeleteDialog}
         onConfirm={handleDeleteCategory}
         itemName={deletingCategory?.name || ''}
       />

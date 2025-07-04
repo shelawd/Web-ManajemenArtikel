@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import ArticleFilters from "@/components/features/articles/ArticleFilters";
 import AppPagination from "@/components/shared/AppPagination";
+import DeleteDialog from "@/components/features/admin/DeleteDialog";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
@@ -31,13 +32,16 @@ export default function ArticlesListPage() {
   const [filters, setFilters] = useState({ category: "", search: "" });
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // PERBAIKAN: Tambahkan state untuk visibilitas dialog
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<Article | null>(null);
 
   const totalArticles = articles.length;
-  const currentPage = 1;
-  const totalPages = 1;
-  
+
   useEffect(() => {
     const fetchArticles = async () => {
+      setIsLoading(true);
       try {
         const token = localStorage.getItem("access_token");
         const response = await api.get("/articles", {
@@ -48,29 +52,45 @@ export default function ArticlesListPage() {
         setArticles(response.data.data || []);
       } catch (error) {
         console.error("Gagal mengambil data artikel:", error);
-        alert("Gagal memuat artikel.");
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchArticles();
   }, []);
 
-  // Hapus artikel
-  const handleDeleteArticle = async (id: number) => {
-    const confirmDelete = confirm(
-      "Are you sure you want to delete this article?"
-    );
-    if (!confirmDelete) return;
+  // PERBAIKAN: Fungsi untuk membuka dialog
+  const handleOpenDeleteDialog = (article: Article) => {
+    setArticleToDelete(article);
+    setIsDialogOpen(true);
+  };
+
+  // PERBAIKAN: Fungsi untuk menutup dialog
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setArticleToDelete(null);
+  };
+  
+  // PERBAIKAN: Fungsi delete yang dipanggil oleh dialog
+  const handleDeleteArticle = async () => {
+    if (!articleToDelete) return;
 
     try {
-      await api.delete(`/articles/${id}`);
-      alert("Article deleted successfully");
-      setArticles((prev) => prev.filter((article) => article.id !== id));
+      const token = localStorage.getItem("access_token");
+      await api.delete(`/articles/${articleToDelete.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setArticles((prevArticles) =>
+        prevArticles.filter((article) => article.id !== articleToDelete.id)
+      );
     } catch (error) {
       console.error("Failed to delete article:", error);
       alert("Failed to delete article. Please try again.");
+    } finally {
+      handleCloseDialog();
     }
   };
 
@@ -123,9 +143,7 @@ export default function ArticlesListPage() {
                     {article.title}
                   </TableCell>
                   <TableCell className="max-w-[120px] truncate">
-                    {typeof article.category === "string"
-                      ? article.category
-                      : article.category?.name}
+                    {article.category?.name}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm md:text-base">
                     {new Date(article.createdAt).toLocaleString()}
@@ -147,10 +165,11 @@ export default function ArticlesListPage() {
                           Edit
                         </Link>
                       </Button>
+                      {/* PERBAIKAN: Pemanggilan onClick untuk membuka dialog */}
                       <Button
                         variant="link"
                         className="p-0 h-auto text-red-500 text-xs md:text-sm"
-                        onClick={() => handleDeleteArticle(article.id)}
+                        onClick={() => handleOpenDeleteDialog(article)}
                       >
                         Delete
                       </Button>
@@ -162,6 +181,14 @@ export default function ArticlesListPage() {
           </Table>
         </div>
       )}
+      
+      {/* PERBAIKAN: Panggil komponen DeleteDialog dengan props yang benar */}
+      <DeleteDialog
+        isOpen={isDialogOpen}
+        onClose={handleCloseDialog}
+        onConfirm={handleDeleteArticle}
+        itemName={articleToDelete?.title || ""}
+      />
     </div>
   );
 }

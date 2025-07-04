@@ -1,62 +1,115 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { UploadCloud, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import LexicalEditor from './LexicalEditor';
+import { useState, useRef, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { UploadCloud, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import LexicalEditor from "./LexicalEditor";
+import api from "@/lib/axios";
 
-// Schema Zod dengan validasi yang lebih aman
 const articleSchema = z.object({
-  title: z.string().min(5, { message: "Please enter a title with at least 5 characters" }),
+  title: z
+    .string()
+    .min(5, { message: "Please enter a title with at least 5 characters" }),
   categoryId: z.string().min(1, { message: "Please select a category" }),
-  content: z.string().min(20, { message: "Content must be at least 20 characters" }),
+  content: z
+    .string()
+    .min(20, { message: "Content must be at least 20 characters" }),
   thumbnail: z
     .any()
     .optional()
-    .refine(file => !file || file instanceof File, {
+    .refine((file) => !file || file instanceof File, {
       message: "Please select a valid picture",
     }),
 });
 
 type ArticleFormData = z.infer<typeof articleSchema>;
 
-const categories = [
-  { id: 'tech-1', name: 'Technology' },
-  { id: 'design-1', name: 'Design' },
-  { id: 'dev-1', name: 'Development' },
-];
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface ArticleFormProps {
-  onSubmit: (data: ArticleFormData) => void;
   isSubmitting?: boolean;
 }
 
-export default function ArticleForm({ onSubmit, isSubmitting = false }: ArticleFormProps) {
+interface ArticleFormProps {
+  isSubmitting?: boolean;
+  initialData?: any; // 1. Terima data awal
+  onSubmit: (data: any) => void;
+}
+
+
+export default function ArticleForm({
+  isSubmitting = false,
+  initialData,          // 1. Terima data awal
+  onSubmit,             // Terima fungsi submit dari parent
+}: ArticleFormProps) {
+  const router = useRouter();
   const form = useForm<ArticleFormData>({
     resolver: zodResolver(articleSchema),
-    defaultValues: {
-      title: '',
-      categoryId: '',
-      content: '',
-      thumbnail: undefined,
-    },
+    // Kita akan set defaultValues melalui useEffect
   });
 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [lexicalJSON, setLexicalJSON] = useState('');
+  const [lexicalJSON, setLexicalJSON] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync lexicalJSON ke form.content jika lexicalJSON berubah dan panjangnya valid
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        title: initialData.title,
+        content: initialData.content,
+        categoryId: initialData.categoryId,
+      });
+      // Set pratinjau gambar jika ada
+      if (initialData.thumbnailUrl) {
+        setPreviewImage(initialData.thumbnailUrl);
+      }
+    }
+  }, [initialData, form]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const response = await api.get("/categories");
+        setCategories(response.data.data);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   useEffect(() => {
     if (lexicalJSON.length >= 20) {
-      form.setValue('content', lexicalJSON, { shouldValidate: true });
+      form.setValue("content", lexicalJSON, { shouldValidate: true });
     }
   }, [lexicalJSON, form]);
 
@@ -64,32 +117,102 @@ export default function ArticleForm({ onSubmit, isSubmitting = false }: ArticleF
     const file = event.target.files?.[0];
     if (file) {
       setPreviewImage(URL.createObjectURL(file));
-      form.setValue('thumbnail', file, { shouldValidate: true });
+      form.setValue("thumbnail", file, { shouldValidate: true });
     } else {
       setPreviewImage(null);
-      form.setValue('thumbnail', undefined, { shouldValidate: true });
+      form.setValue("thumbnail", undefined, { shouldValidate: true });
     }
   };
 
-  const handleChangeThumbnail = () => {
-    fileInputRef.current?.click();
+   const handleFormSubmit = async (data: ArticleFormData) => {
+    // Logika upload gambar tetap sama, hasilnya digabung ke data
+    let imageUrl = initialData?.thumbnailUrl || ''; // Gunakan gambar lama jika tidak ada yg baru
+    if (data.thumbnail && data.thumbnail instanceof File) {
+      // ... (logika upload gambar Anda)
+      // Setelah upload, `imageUrl` akan diisi dengan URL baru
+      const imageFormData = new FormData();
+      imageFormData.append('image', data.thumbnail);
+      const token = localStorage.getItem("access_token");
+      try {
+        const uploadResponse = await api.post("/upload", imageFormData, {
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+        });
+        imageUrl = uploadResponse.data.url;
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        alert("Failed to upload new image.");
+        return;
+      }
+    }
+    
+    // Gabungkan semua data untuk dikirim ke parent
+    const finalData = {
+      ...data,
+      imageUrl: imageUrl,
+    };
+    
+    // Hapus field thumbnail karena tidak dibutuhkan di payload API
+    delete finalData.thumbnail;
+
+    onSubmit(finalData); // Kirim data final ke fungsi handleUpdateArticle atau handleCreateArticle
   };
+
+  const handleChangeThumbnail = () => fileInputRef.current?.click();
 
   const handleDeleteThumbnail = () => {
     setPreviewImage(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    form.setValue('thumbnail', undefined, { shouldValidate: true });
+    form.setValue("thumbnail", undefined, { shouldValidate: true });
   };
 
-  const handleFormSubmit = (data: ArticleFormData) => {
-    console.log("Submitting form data:", data);
-    const validationErrors = form.formState.errors;
-    if (Object.keys(validationErrors).length) {
-      console.log("Validation errors:", validationErrors);
+  const handleCreateArticle = async (data: ArticleFormData) => {
+    let imageUrl = "";
+    if (data.thumbnail && data.thumbnail instanceof File) {
+      try {
+        const imageFormData = new FormData();
+        imageFormData.append("image", data.thumbnail);
+        const token = localStorage.getItem("access_token");
+        const uploadResponse = await api.post("/upload", imageFormData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        imageUrl = uploadResponse.data.url;
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        return;
+      }
     }
-    onSubmit(data);
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const articlePayload = {
+        title: data.title,
+        content: data.content,
+        categoryId: data.categoryId,
+        imageUrl: imageUrl,
+      };
+      await api.post("/articles", articlePayload, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      alert("Artikel berhasil dibuat!");
+      router.push('/admin/articles');
+    } catch (error: any) {
+      console.error("Error creating article:", error);
+      if (error.response) {
+        alert(
+          `Gagal membuat artikel: ${JSON.stringify(
+            error.response.data.error || error.response.data.message
+          )}`
+        );
+      }
+    }
   };
 
   return (
@@ -104,18 +227,22 @@ export default function ArticleForm({ onSubmit, isSubmitting = false }: ArticleF
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
-          {/* Thumbnail uploader */}
+        <form
+          onSubmit={form.handleSubmit(handleCreateArticle)}
+          className="space-y-8"
+        >
+          {/* Thumbnail Uploader */}
           <FormField
             control={form.control}
             name="thumbnail"
-            render={({ field }) => (
+            render={() => (
               <FormItem>
                 <FormLabel>Thumbnail</FormLabel>
                 <FormControl>
                   <div
                     className="w-full h-48 border-2 border-dashed rounded-lg flex flex-col justify-center items-center cursor-pointer relative"
-                    onClick={handleChangeThumbnail}
+                    // PERBAIKAN: onClick hanya aktif jika tidak ada gambar pratinjau
+                    onClick={!previewImage ? handleChangeThumbnail : undefined}
                   >
                     <input
                       type="file"
@@ -126,19 +253,31 @@ export default function ArticleForm({ onSubmit, isSubmitting = false }: ArticleF
                     />
                     {previewImage ? (
                       <div className="w-full h-full flex flex-col items-center justify-center">
-                        <img src={previewImage} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
+                        <img
+                          src={previewImage}
+                          alt="Preview"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
                         <div className="flex gap-4 mt-2">
                           <button
                             type="button"
                             className="text-blue-600 underline"
-                            onClick={handleChangeThumbnail}
+                            // PERBAIKAN: event click pada tombol ini tidak lagi konflik
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleChangeThumbnail();
+                            }}
                           >
                             Change
                           </button>
                           <button
                             type="button"
                             className="text-red-600 underline"
-                            onClick={handleDeleteThumbnail}
+                            // PERBAIKAN: event click pada tombol ini tidak lagi konflik
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteThumbnail();
+                            }}
                           >
                             Delete
                           </button>
@@ -147,8 +286,12 @@ export default function ArticleForm({ onSubmit, isSubmitting = false }: ArticleF
                     ) : (
                       <>
                         <UploadCloud className="w-12 h-12 text-gray-400" />
-                        <p className="mt-2 text-sm text-gray-600">Click to select files</p>
-                        <p className="text-xs text-gray-500">Supported file types: jpg, png</p>
+                        <p className="mt-2 text-sm text-gray-600">
+                          Click to select files
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Supported file types: jpg, png
+                        </p>
                       </>
                     )}
                   </div>
@@ -180,18 +323,24 @@ export default function ArticleForm({ onSubmit, isSubmitting = false }: ArticleF
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  defaultValue=""
+                >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger disabled={isLoadingCategories}>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {categories.map(category => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
+                    {categories
+                      .filter((category) => category.id && category.id !== "")
+                      .map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -219,14 +368,18 @@ export default function ArticleForm({ onSubmit, isSubmitting = false }: ArticleF
             )}
           />
 
-          {/* Action buttons */}
+          {/* Action Buttons */}
           <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="outline" onClick={() => window.history.back()}>
+            <Button>Preview</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.history.back()}
+            >
               Cancel
             </Button>
-            <Button>Preview</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Uploading...' : 'Upload'}
+              {isSubmitting ? "Uploading..." : "Upload"}
             </Button>
           </div>
         </form>
