@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   Table,
@@ -11,29 +11,70 @@ import {
 import { Button } from "@/components/ui/button";
 import ArticleFilters from "@/components/features/articles/ArticleFilters";
 import AppPagination from "@/components/shared/AppPagination";
-import { useState } from "react";
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import api from "@/lib/axios";
 
-// Mock data, ganti dengan data dari API Anda
-const mockArticles = [
-  { id: 1, title: 'Cybersecurity Essentials Every Developer Should Know', category: 'Technology', createdAt: 'April 13, 2025 10:55:12' },
-  { id: 2, title: 'The Future of Work: Remote-First Teams and Digital Tools', category: 'Technology', createdAt: 'April 13, 2025 10:55:12' },
-  // ...tambahkan data lain
-];
+type Article = {
+  id: string;
+  title: string;
+  content: string;
+  category: {
+    id: string;
+    name: string;
+  };
+  createdAt: string;
+  thumbnailUrl?: string;
+};
 
 export default function AdminArticlesPage() {
-  const [filters, setFilters] = useState({ category: '', search: '' });
-  
-  // Ganti dengan state dari API
-  const totalArticles = 25; 
+  const [filters, setFilters] = useState({ category: "", search: "" });
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const totalArticles = articles.length;
   const currentPage = 1;
-  const totalPages = 3;
+  const totalPages = 1;
+
+  // Ambil artikel dari API saat halaman dimuat
+  const fetchArticles = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get("/articles");
+      setArticles(response.data.data);
+    } catch (error) {
+      console.error("Failed to fetch articles:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
+  // Hapus artikel
+  const handleDeleteArticle = async (id: number) => {
+    const confirmDelete = confirm(
+      "Are you sure you want to delete this article?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`/articles/${id}`);
+      alert("Article deleted successfully");
+      setArticles((prev) => prev.filter((article) => article.id !== id));
+    } catch (error) {
+      console.error("Failed to delete article:", error);
+      alert("Failed to delete article. Please try again.");
+    }
+  };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm">
-      <div className="flex justify-between items-center mb-6">
-        <p>Total Articles : {totalArticles}</p>
-        <div className="flex items-center gap-4">
+ <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm max-w-full">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <p className="text-sm md:text-base font-semibold">Total Articles: {totalArticles}</p>
+        <div className="flex flex-wrap items-center gap-4">
           <ArticleFilters onFilterChange={setFilters} />
           <Button asChild>
             <Link href="/admin/articles/create">+ Add Articles</Link>
@@ -41,46 +82,73 @@ export default function AdminArticlesPage() {
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[100px]">Thumbnails</TableHead>
-            <TableHead>Title</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Created at</TableHead>
-            <TableHead className="text-right">Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {mockArticles.map((article) => (
-            <TableRow key={article.id}>
-              <TableCell>
-                <div className="w-16 h-10 bg-gray-200 rounded">
-                  <img src={`https://picsum.photos/seed/${article.id}/160/100`} alt={article.title} className="w-full h-full object-cover rounded" />
-                </div>
-              </TableCell>
-              <TableCell className="font-medium">{article.title}</TableCell>
-              <TableCell>{article.category}</TableCell>
-              <TableCell>{article.createdAt}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex gap-2 justify-end">
-                  <Button variant="link" className="p-0 h-auto">Preview</Button>
-                  <Button variant="link" className="p-0 h-auto">Edit</Button>
-                  <Button variant="link" className="p-0 h-auto text-red-500">Delete</Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      
-      <div className="mt-6 flex justify-center">
-        <AppPagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={() => {}}
-        />
-      </div>
+      {isLoading ? (
+        <p>Loading articles...</p>
+      ) : (
+        <div className="w-full overflow-x-auto">
+          <Table className="min-w-[600px] md:min-w-[900px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[80px]">Thumbnails</TableHead>
+                <TableHead className="min-w-[150px]">Title</TableHead>
+                <TableHead className="min-w-[120px]">Category</TableHead>
+                <TableHead className="min-w-[160px]">Created at</TableHead>
+                <TableHead className="text-right min-w-[140px]">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {articles.map((article) => (
+                <TableRow key={article.id}>
+                  <TableCell>
+                    <div className="w-12 h-8 md:w-16 md:h-10 bg-gray-200 rounded overflow-hidden">
+                      <img
+                        src={
+                          article.thumbnailUrl ||
+                          `https://picsum.photos/seed/${article.id}/160/100`
+                        }
+                        alt={article.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium max-w-[150px] md:max-w-none truncate">
+                    {article.title}
+                  </TableCell>
+                  <TableCell className="max-w-[120px] truncate">
+                    {typeof article.category === "string"
+                      ? article.category
+                      : article.category?.name}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm md:text-base">
+                    {new Date(article.createdAt).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end flex-wrap">
+                      <Button variant="link" className="p-0 h-auto text-xs md:text-sm">
+                        Preview
+                      </Button>
+                      <Button
+                        asChild
+                        variant="link"
+                        className="p-0 h-auto text-blue-600 text-xs md:text-sm"
+                      >
+                        <Link href={`/admin/articles/edit/${article.id}`}>Edit</Link>
+                      </Button>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-red-500 text-xs md:text-sm"
+                        onClick={() => handleDeleteArticle(article.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,22 +1,24 @@
+"use client";
 
-'use client';
-
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import api from "@/lib/axios";
+import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Please enter your username'),
-  password: z.string().min(1, 'Please enter your password'),
+  username: z.string().min(1, "Please enter your username"),
+  password: z.string().min(1, "Please enter your password"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -27,8 +29,35 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    // TODO: Ganti dengan logic autentikasi Anda
-    alert(JSON.stringify(data));
+    try {
+      const response = await api.post("/auth/login", {
+        username: data.username,
+        password: data.password,
+      });
+
+      const token = response.data.token;
+      const role = response.data.role; // Asumsi backend mengirim role user
+
+      if (token && role) {
+        localStorage.setItem("access_token", token);
+        alert("Login berhasil!");
+
+        // Redirect berdasarkan role
+        if (role.toLowerCase() === "admin") {
+          router.push("/admin"); 
+        } else if (role.toLowerCase() === "user") {
+          router.push("/"); 
+        } else {
+          router.push("/"); 
+        }
+      } else {
+        alert("Login berhasil, tapi token atau role tidak ditemukan.");
+      }
+    } catch (error: any) {
+      alert(
+        "Login gagal: " + (error.response?.data?.message || error.message || "Unknown error")
+      );
+    }
   };
 
   return (
@@ -36,7 +65,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-md p-8 flex flex-col items-center">
         {/* Logo */}
         <Image
-          src="/next.svg" // Ganti dengan logo Anda, misal: "/logoipsum.svg"
+          src="/next.svg"
           alt="Logo"
           width={120}
           height={40}
@@ -55,9 +84,9 @@ export default function LoginPage() {
               type="text"
               placeholder="Input username"
               className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.username ? 'border-red-500' : 'border-gray-300'
+                errors.username ? "border-red-500" : "border-gray-300"
               }`}
-              {...register('username')}
+              {...register("username")}
               autoComplete="username"
             />
             {errors.username && (
@@ -72,12 +101,12 @@ export default function LoginPage() {
             </label>
             <input
               id="password"
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               placeholder="Input password"
               className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.password ? 'border-red-500' : 'border-gray-300'
+                errors.password ? "border-red-500" : "border-gray-300"
               }`}
-              {...register('password')}
+              {...register("password")}
               autoComplete="current-password"
             />
             <button
@@ -99,13 +128,13 @@ export default function LoginPage() {
             className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Loading...' : 'Login'}
+            {isSubmitting ? "Loading..." : "Login"}
           </button>
         </form>
 
         {/* Register Link */}
         <p className="mt-4 text-sm text-center text-gray-600">
-          Don&apos;t have an account?{' '}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="text-blue-600 hover:underline">
             Register
           </Link>

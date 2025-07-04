@@ -1,11 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Newspaper, LogOut, PanelsTopLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { fetchUserProfile } from '@/lib/auth';
 
-// Komponen Sidebar
 function Sidebar() {
   const pathname = usePathname();
   const navItems = [
@@ -35,7 +36,10 @@ function Sidebar() {
         ))}
       </nav>
       <div className="p-4 border-t border-blue-700">
-        <Button variant="ghost" className="w-full justify-start gap-3 text-white hover:bg-blue-700/50 hover:text-white">
+        <Button variant="ghost" className="w-full justify-start gap-3 text-white hover:bg-blue-700/50 hover:text-white" onClick={() => {
+          localStorage.removeItem('access_token');
+          window.location.href = '/login';
+        }}>
           <LogOut className="w-5 h-5" />
           Logout
         </Button>
@@ -44,18 +48,17 @@ function Sidebar() {
   );
 }
 
-// Komponen Header
-function Header() {
+function Header({ username }: { username: string }) {
   return (
     <header className="bg-white border-b h-16 flex items-center justify-between px-8">
       <h2 className="text-xl font-semibold">Articles</h2>
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <p className="font-semibold">James Dean</p>
+          <p className="font-semibold">{username}</p>
           <p className="text-sm text-gray-500">Admin</p>
         </div>
         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-bold text-blue-600">
-          JD
+          {username ? username[0].toUpperCase() : ''}
         </div>
       </div>
     </header>
@@ -63,15 +66,34 @@ function Header() {
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Di sini Anda bisa menambahkan logika otentikasi admin
+  const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchUserProfile()
+      .then(profile => {
+        if (profile.role !== 'admin') {
+          router.push('/');
+        } else {
+          setUsername(profile.username);
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('access_token');
+        router.push('/login');
+      })
+      .finally(() => setLoading(false));
+  }, [router]);
+
+  if (loading) return <p>Loading...</p>; // Bisa diganti spinner/skeleton
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <div className="flex-1 flex flex-col">
-        <Header />
-        <main className="p-8">
-          {children}
-        </main>
+        <Header username={username} />
+        <main className="p-8">{children}</main>
       </div>
     </div>
   );
