@@ -39,7 +39,6 @@ export default function AppPagination({
                 onPageChange(currentPage - 1);
               }
             }}
-            // Nonaktifkan jika di halaman pertama
             className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
           />
         </PaginationItem>

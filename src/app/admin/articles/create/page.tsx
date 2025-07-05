@@ -5,51 +5,53 @@ import api from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-// Tipe data sesuai dengan skema Zod di ArticleForm
-type ArticleFormData = {
-  title: string;
-  categoryId: string;
-  content: string;
-  thumbnail?: File;
-};
-
 export default function CreateArticlePage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCreateArticle = async (data) => {
+  const handleCreateArticle = async (data: any) => {
     setIsSubmitting(true);
 
     try {
-      const formData = new FormData();
-      formData.append("title", data.title);
-      formData.append("categoryId", data.categoryId);
-      formData.append("content", data.content);
-      if (data.thumbnail) {
-        formData.append("thumbnail", data.thumbnail);
-      }
-
-      // Ambil token JWT dari localStorage atau tempat kamu simpan
       const token = localStorage.getItem("access_token");
+      
+      const articlePayload = {
+        title: data.title,
+        content: data.content,
+        categoryId: data.categoryId,
+        imageUrl: data.imageUrl,
+      };
 
-      await api.post("/articles", formData, {
+      await api.post("/articles", articlePayload, {
         headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`, // Kirim JWT di header Authorization
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      alert("Artikel berhasil dibuat!");
-      router.push("/admin/articles"); // Redirect ke daftar artikel
-    } catch (error) {
-      console.error("Gagal membuat artikel:", error);
-      alert("Gagal membuat artikel. Silakan coba lagi.");
+      return Promise.resolve(); // Success
+    } catch (error: any) {
+      console.error("Failed to create article:", error);
+      if (error.response) {
+        alert(
+          `Failed to create article: ${JSON.stringify(
+            error.response.data.error || error.response.data.message
+          )}`
+        );
+      } else {
+        alert("Failed to create article. Please try again.");
+      }
+      return Promise.reject(error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <ArticleForm onSubmit={handleCreateArticle} isSubmitting={isSubmitting} />
+    <ArticleForm 
+      mode="create"
+      onSubmit={handleCreateArticle} 
+      isSubmitting={isSubmitting} 
+    />
   );
 }

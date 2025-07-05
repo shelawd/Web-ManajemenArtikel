@@ -33,10 +33,10 @@ export default function ArticleCard({ article }: ArticleCardProps) {
         <div className="aspect-video bg-muted rounded-md mb-4">
         </div>
         <p className="text-sm text-muted-foreground">{formattedDate}</p>
-        <CardTitle className="text-lg">{article.title}</CardTitle>
+        <CardTitle className="text-lg break-words">{article.title}</CardTitle>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="text-sm text-muted-foreground">{contentSnippet}</p>
+        <p className="text-sm text-muted-foreground break-words line-clamp-3 overflow-hidden max-h-16">{contentSnippet}</p>
       </CardContent>
       <CardFooter>
         <Badge variant="outline">{article.category.name}</Badge>
