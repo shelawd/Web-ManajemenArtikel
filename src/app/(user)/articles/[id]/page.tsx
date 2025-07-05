@@ -1,6 +1,26 @@
 import api from '@/lib/axios';
 import Image from 'next/image';
 
+// --- PERBAIKAN DI SINI ---
+// Tipe 'params' sekarang adalah Promise yang akan menghasilkan objek { id: string }
+type ArticleDetailPageProps = {
+  params: Promise<{
+    id: string;
+  }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+type Article = {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  image?: string;
+  user?: { username?: string };
+  categoryId?: string;
+  category?: { name?: string };
+};
+
 // Fungsi untuk mengambil data artikel tunggal berdasarkan ID
 async function getArticleDetail(id: string) {
   try {
@@ -24,16 +44,45 @@ async function getOtherArticles(categoryId: string, excludeId: string) {
   }
 }
 
-export default async function ArticleDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
-  const article = await getArticleDetail(id);
+// Tambahkan fungsi utilitas di luar komponen
+function extractPlainText(content: string, maxLength = 100): string {
+  // Coba parse sebagai JSON (Lexical)
+  try {
+    const json = JSON.parse(content);
+    if (json.root && Array.isArray(json.root.children)) {
+      const text = json.root.children
+        .map((p: any) =>
+          Array.isArray(p.children)
+            ? p.children.map((c: any) => c.text || '').join(' ')
+            : ''
+        )
+        .join(' ');
+      return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+    }
+  } catch {}
+  // Jika HTML, hapus tag
+  if (typeof window !== 'undefined') {
+    const div = document.createElement('div');
+    div.innerHTML = content;
+    const text = div.textContent || div.innerText || '';
+    return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+  } else {
+    // SSR fallback: hapus tag pakai regex
+    const text = content.replace(/<[^>]+>/g, '');
+    return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+  }
+}
 
+export default async function ArticleDetailPage({ params }: ArticleDetailPageProps) {
+  // Penggunaan 'await' di sini sudah benar dan sekarang cocok dengan tipenya
+  const { id } = await params;
+  const article: Article | null = await getArticleDetail(id);
+  
   if (!article) {
     return <div className="text-center py-20 text-lg">Artikel tidak ditemukan.</div>;
   }
 
-  // Ambil artikel lain dari kategori yang sama
-  const otherArticles = article.categoryId
+  const otherArticles: Article[] = article.categoryId
     ? await getOtherArticles(article.categoryId, article.id)
     : [];
 
@@ -76,7 +125,12 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
             <div key={a.id} className="bg-white rounded-xl shadow p-4 flex flex-col">
               <div className="w-full h-40 relative mb-3 rounded-lg overflow-hidden">
                 {a.image ? (
-                  <Image src={a.image} alt={a.title} fill className="object-cover" />
+                  <Image 
+                  src={a.image || `https://picsum.photos/seed/${a.id}/400/225`} 
+                  alt={a.title} 
+                  fill 
+                  className="object-cover" 
+                />
                 ) : (
                   <div className="w-full h-full bg-gray-200" />
                 )}
@@ -85,7 +139,7 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
                 {new Date(a.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
               </div>
               <div className="font-semibold text-base mb-1 line-clamp-2">{a.title}</div>
-              <div className="text-gray-600 text-sm mb-2 line-clamp-3">{a.content}</div>
+              <div className="text-gray-600 text-sm mb-2 line-clamp-3">{extractPlainText(a.content, 100)}</div>
               <div className="flex gap-2 flex-wrap mt-auto">
                 {a.category?.name && (
                   <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">{a.category.name}</span>

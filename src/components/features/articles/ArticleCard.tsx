@@ -17,6 +17,28 @@ interface ArticleCardProps {
   article: Article;
 }
 
+function extractPlainText(content: string, maxLength = 100): string {
+  // Coba parse sebagai JSON (Lexical)
+  try {
+    const json = JSON.parse(content);
+    if (json.root && Array.isArray(json.root.children)) {
+      const text = json.root.children
+        .map((p: any) =>
+          Array.isArray(p.children)
+            ? p.children.map((c: any) => c.text || '').join(' ')
+            : ''
+        )
+        .join(' ');
+      return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+    }
+  } catch {}
+  // Jika HTML, hapus tag
+  const div = document.createElement('div');
+  div.innerHTML = content;
+  const text = div.textContent || div.innerText || '';
+  return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+}
+
 export default function ArticleCard({ article }: ArticleCardProps) {
   const formattedDate = new Date(article.createdAt).toLocaleDateString("en-US", {
     year: "numeric",
@@ -24,17 +46,23 @@ export default function ArticleCard({ article }: ArticleCardProps) {
     day: "numeric",
   });
 
-  const contentSnippet = article.content.substring(0, 100) + "...";
+  const contentSnippet = extractPlainText(article.content, 100);
 
   return (
     <Link href={`/articles/${article.id}`}>
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <div className="aspect-video bg-muted rounded-md mb-4">
-        </div>
-        <p className="text-sm text-muted-foreground">{formattedDate}</p>
-        <CardTitle className="text-lg break-words">{article.title}</CardTitle>
-      </CardHeader>
+          {/* Bagian yang dimodifikasi untuk menampilkan gambar */}
+          <div className="relative aspect-video bg-muted rounded-md mb-4 overflow-hidden">
+            <img
+              src={article.imageUrl || `https://picsum.photos/seed/${article.id}/400/225`}
+              alt={article.title}
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">{formattedDate}</p>
+          <CardTitle className="text-lg break-words">{article.title}</CardTitle>
+        </CardHeader>
       <CardContent className="flex-grow">
         <p className="text-sm text-muted-foreground break-words line-clamp-3 overflow-hidden max-h-16">{contentSnippet}</p>
       </CardContent>
